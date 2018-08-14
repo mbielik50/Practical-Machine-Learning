@@ -1,0 +1,52 @@
+# Practical Machine Learning - Final Project
+The goal of this project is to predict the manner in which barbell lefts will be executed. This is the "classe" variable in the training set, based on the collection of data from devices such as Jawbone UP, Nike Fuel Band, and FitBit.
+## Load Packages
+```{r}
+suppressMessages(library(caret))
+suppressMessages(library(rpart))
+suppressMessages(library(rpart.plot))
+suppressMessages(library(rattle))
+suppressMessages(library(randomForest))
+set.seed(6824)
+```
+## Load and Cleanse Data
+Note, in order to cut down on report length, the data columns and formats were analyzed offline. The tactical cleansing steps are included in the following r code.
+```{r}
+# Load data
+Training <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"), na.strings=c("NA","#DIV/0!",""))
+Testing <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"), na.strings=c("NA","#DIV/0!",""))
+# remove Columns that will not add value in analysis: columns with no data, overlapping columns, non-predective columnns, etc.
+Testing = Testing[,colSums(is.na(Training))==0]
+Training = Training[,colSums(is.na(Training))==0]
+Testing = Testing[,-nearZeroVar(Training)]
+Training = Training[,-nearZeroVar(Training)]
+Testing = Testing[,-c(1:5)]
+Training = Training[,-c(1:5)]
+# Particition the data sets
+inSubTraining = createDataPartition(y=Training$classe, p=0.6, list=FALSE)
+SubTraining = Training[inSubTraining,]
+SubTesting = Training[-inSubTraining,]
+```
+
+##Modeling
+The variable we are predicting is the classe variable. Here is a quick look at the values and distribution:
+```{r}
+histogram(SubTraining$classe, col="blue")
+```
+For modeling, we will assess two models: Decision Tree and Random Forest and analyze the fit of each based on confusion matrix results.
+First, Decision Tree:
+```{r}
+DTmodel = rpart(classe ~ ., data=SubTraining, method="class")
+DTpredict = predict(DTmodel, SubTesting, type="class")
+rpart.plot(DTmodel, main="Decision Tree Model", under=TRUE, extra=100)
+confusionMatrix(DTpredict, SubTesting$classe)
+```
+Next, Random Forest:
+```{r}
+RFmodel = randomForest(classe ~ ., data=SubTraining, method="class")
+RFpredict = predict(RFmodel, SubTesting, type="class")
+confusionMatrix(RFpredict, SubTesting$classe)
+```
+#Conclusion
+Based on this analysis, we can see that the Random Forest model yields a significantly higher prediction accuracy, 99.6% for Random Forest versus 75.8% for Decision Tree. The out of sample error for the Random Forest model is .004%. Based on this cross-validation test, we will use the Random Forest model to predict the 20 test cases for this assignment, with the expectation that the prediction will yield few or no misclassifications.
+
